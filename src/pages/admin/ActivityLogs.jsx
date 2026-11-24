@@ -12,10 +12,13 @@ import {
     User,
     Clock,
     AlertCircle,
-    X,
     ShieldCheck,
     ClipboardList,
-    RotateCcw
+    RotateCcw,
+    Receipt,
+    CreditCard,
+    CheckCircle2,
+    Banknote
 } from "lucide-react";
 
 import activityLogService from "../../services/activityLogService";
@@ -43,6 +46,13 @@ const CATEGORY_STYLES = {
     schedule: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
     user: "bg-pink-50 text-pink-700 ring-pink-600/20",
     system: "bg-slate-100 text-slate-700 ring-slate-600/20"
+};
+
+const PAYMENT_STATUS_STYLES = {
+    Paid: "bg-emerald-50 text-emerald-700",
+    Pending: "bg-amber-50 text-amber-700",
+    Rejected: "bg-red-50 text-red-700",
+    Refunded: "bg-purple-50 text-purple-700"
 };
 
 // ==========================================
@@ -73,6 +83,240 @@ const formatAction = (action = "") => {
         .replace(/_/g, " ")
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
 };
+
+const formatCurrency = (amount) => {
+    if (
+        amount === undefined ||
+        amount === null ||
+        amount === ""
+    ) {
+        return "Not available";
+    }
+
+    const numericAmount = Number(amount);
+
+    if (!Number.isFinite(numericAmount)) {
+        return "Not available";
+    }
+
+    return new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP"
+    }).format(numericAmount);
+};
+
+const getPaymentStatus = (metadata = {}) => {
+    return (
+        metadata.newStatus ||
+        metadata.status ||
+        null
+    );
+};
+
+// ==========================================
+// GET CUSTOMER NAME FROM DESCRIPTION
+// ==========================================
+
+const getCustomerNameFromDescription = (description = "") => {
+    if (!description || typeof description !== "string") {
+        return null;
+    }
+
+    const patterns = [
+        /Payment received from (.+?)\.\s*Receipt No:/i,
+        /Pending payment recorded for (.+?)\.\s*Amount:/i,
+        /Payment for (.+?) changed from .+? to .+?\./i
+    ];
+
+    for (const pattern of patterns) {
+        const match = description.match(pattern);
+
+        if (match?.[1]) {
+            const name = match[1].trim();
+
+            if (
+                name &&
+                name.toLowerCase() !== "unknown customer"
+            ) {
+                return name;
+            }
+        }
+    }
+
+    return null;
+};
+
+// ==========================================
+// GET CUSTOMER DISPLAY NAME
+// ==========================================
+
+const getCustomerDisplayName = (activity, metadata = {}) => {
+    const customer = metadata.customer;
+
+    const possibleNames = [
+        metadata.customerName,
+        customer?.fullName,
+        customer?.name,
+        customer?.username,
+        metadata.customerFullName,
+        activity.customerName,
+        getCustomerNameFromDescription(activity.description)
+    ];
+
+    const customerName = possibleNames.find(
+        (name) =>
+            typeof name === "string" &&
+            name.trim() !== "" &&
+            name.toLowerCase() !== "unknown customer"
+    );
+
+    return customerName || "Customer details unavailable";
+};
+
+// ==========================================
+// PAYMENT DETAILS COMPONENT
+// ==========================================
+
+function PaymentDetails({ activity, metadata = {} }) {
+    const paymentStatus = getPaymentStatus(metadata);
+
+    const customerName = getCustomerDisplayName(
+        activity,
+        metadata
+    );
+
+    const receiptNumber =
+        metadata.receiptNumber ||
+        metadata.receipt ||
+        "Not generated";
+
+    const amount = formatCurrency(metadata.amount);
+
+    const paymentMethod =
+        metadata.paymentMethod ||
+        metadata.method ||
+        "Not available";
+
+    const hasPaymentDetails =
+        metadata.customerName ||
+        metadata.customer ||
+        metadata.amount !== undefined ||
+        metadata.paymentMethod ||
+        metadata.receiptNumber ||
+        paymentStatus ||
+        activity.description;
+
+    if (!hasPaymentDetails) {
+        return null;
+    }
+
+    const detailItems = [
+        {
+            label: "Customer",
+            value: customerName,
+            icon: User
+        },
+        {
+            label: "Receipt Number",
+            value: receiptNumber,
+            icon: Receipt,
+            mono: true
+        },
+        {
+            label: "Amount",
+            value: amount,
+            icon: Banknote
+        },
+        {
+            label: "Payment Method",
+            value: paymentMethod,
+            icon: CreditCard
+        }
+    ];
+
+    return (
+        <div className="mt-4 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/40">
+
+            {/* PAYMENT HEADER */}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 px-4 py-3">
+
+                <div className="flex items-center gap-2">
+
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                        <Receipt size={16} />
+                    </div>
+
+                    <div>
+                        <h4 className="text-xs font-bold text-slate-800">
+                            Payment Details
+                        </h4>
+
+                        <p className="text-[10px] text-slate-500">
+                            Transaction information
+                        </p>
+                    </div>
+
+                </div>
+
+                {paymentStatus && (
+                    <span
+                        className={`
+                            inline-flex items-center gap-1.5
+                            rounded-full px-2.5 py-1
+                            text-[10px] font-bold uppercase tracking-wide
+                            ${
+                                PAYMENT_STATUS_STYLES[paymentStatus] ||
+                                "bg-slate-100 text-slate-700"
+                            }
+                        `}
+                    >
+                        <CheckCircle2 size={12} />
+                        {paymentStatus}
+                    </span>
+                )}
+
+            </div>
+
+            {/* PAYMENT INFORMATION */}
+
+            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+
+                {detailItems.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                        <div
+                            key={item.label}
+                            className="min-w-0"
+                        >
+
+                            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+
+                                <Icon size={12} />
+
+                                {item.label}
+
+                            </div>
+
+                            <p
+                                className={`
+                                    break-words text-xs font-semibold text-slate-800
+                                    ${item.mono ? "font-mono" : ""}
+                                `}
+                            >
+                                {item.value}
+                            </p>
+
+                        </div>
+                    );
+                })}
+
+            </div>
+
+        </div>
+    );
+}
 
 // ==========================================
 // ACTIVITY LOG PAGE
@@ -140,7 +384,11 @@ export default function ActivityLogs() {
             const response =
                 await activityLogService.getActivities(params);
 
-            setActivities(response.activities || []);
+            setActivities(
+                Array.isArray(response.activities)
+                    ? response.activities
+                    : []
+            );
 
             setPagination(
                 response.pagination || {
@@ -217,14 +465,13 @@ export default function ActivityLogs() {
     return (
         <div className="space-y-6 p-4 sm:p-6 lg:p-8">
 
-            {/* ==================================
-                PAGE HEADER
-            ================================== */}
+            {/* PAGE HEADER */}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
                 <div>
                     <div className="flex items-center gap-2">
+
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                             <Activity size={21} />
                         </div>
@@ -238,6 +485,7 @@ export default function ActivityLogs() {
                                 System activity monitoring and audit history
                             </p>
                         </div>
+
                     </div>
                 </div>
 
@@ -257,15 +505,12 @@ export default function ActivityLogs() {
 
             </div>
 
-            {/* ==================================
-                SUMMARY CARDS
-            ================================== */}
+            {/* SUMMARY CARDS */}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-                {/* TOTAL ACTIVITIES */}
-
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
                     <div className="flex items-center justify-between">
 
                         <div>
@@ -287,11 +532,11 @@ export default function ActivityLogs() {
                         </div>
 
                     </div>
+
                 </div>
 
-                {/* CURRENT PAGE */}
-
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
                     <div className="flex items-center justify-between">
 
                         <div>
@@ -301,6 +546,7 @@ export default function ActivityLogs() {
 
                             <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
                                 {pagination.totalPages > 0 ? page : 0}
+
                                 <span className="ml-1 text-base font-medium text-slate-400">
                                     / {pagination.totalPages}
                                 </span>
@@ -316,13 +562,12 @@ export default function ActivityLogs() {
                         </div>
 
                     </div>
+
                 </div>
 
             </div>
 
-            {/* ==================================
-                FILTER SECTION
-            ================================== */}
+            {/* FILTER SECTION */}
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
@@ -359,6 +604,7 @@ export default function ActivityLogs() {
                         </label>
 
                         <div className="relative">
+
                             <Search
                                 size={17}
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -373,6 +619,7 @@ export default function ActivityLogs() {
                                 placeholder="Search activities..."
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                             />
+
                         </div>
                     </div>
 
@@ -409,6 +656,7 @@ export default function ActivityLogs() {
                         </label>
 
                         <div className="relative">
+
                             <CalendarDays
                                 size={16}
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -423,6 +671,7 @@ export default function ActivityLogs() {
                                 }
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                             />
+
                         </div>
                     </div>
 
@@ -434,6 +683,7 @@ export default function ActivityLogs() {
                         </label>
 
                         <div className="relative">
+
                             <CalendarDays
                                 size={16}
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -448,6 +698,7 @@ export default function ActivityLogs() {
                                 }
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                             />
+
                         </div>
                     </div>
 
@@ -455,13 +706,9 @@ export default function ActivityLogs() {
 
             </div>
 
-            {/* ==================================
-                ACTIVITY HISTORY
-            ================================== */}
+            {/* ACTIVITY HISTORY */}
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-                {/* SECTION HEADER */}
 
                 <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
 
@@ -568,124 +815,159 @@ export default function ActivityLogs() {
                 {!loading && !error && activities.length > 0 && (
                     <div className="divide-y divide-slate-100">
 
-                        {activities.map((activity) => (
+                        {activities.map((activity) => {
 
-                            <div
-                                key={activity._id}
-                                className="flex gap-4 px-5 py-5 transition hover:bg-slate-50/80 sm:px-6"
-                            >
+                            const metadata = activity.metadata || {};
 
-                                {/* ACTIVITY ICON */}
+                            return (
+                                <div
+                                    key={activity._id}
+                                    className="flex gap-4 px-5 py-5 transition hover:bg-slate-50/80 sm:px-6"
+                                >
 
-                                <div className="relative flex shrink-0 flex-col items-center">
+                                    {/* ACTIVITY ICON */}
 
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                                        <Activity size={19} />
-                                    </div>
+                                    <div className="relative flex shrink-0 flex-col items-center">
 
-                                </div>
-
-                                {/* ACTIVITY INFORMATION */}
-
-                                <div className="min-w-0 flex-1">
-
-                                    <div className="flex flex-wrap items-center gap-2">
-
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            {formatAction(activity.action)}
-                                        </h3>
-
-                                        <span
+                                        <div
                                             className={`
-                                                inline-flex items-center rounded-full
-                                                px-2.5 py-1 text-[10px]
-                                                font-bold uppercase tracking-wide
-                                                ring-1 ring-inset
-
+                                                flex h-10 w-10 items-center
+                                                justify-center rounded-xl ring-1
                                                 ${
-                                                    CATEGORY_STYLES[
-                                                        activity.category
-                                                    ] ||
-                                                    "bg-slate-100 text-slate-700 ring-slate-600/20"
+                                                    activity.category === "payment"
+                                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                                        : "bg-slate-100 text-slate-600 ring-slate-200"
                                                 }
                                             `}
                                         >
-                                            {activity.category || "system"}
-                                        </span>
+                                            {activity.category === "payment" ? (
+                                                <Receipt size={19} />
+                                            ) : (
+                                                <Activity size={19} />
+                                            )}
+                                        </div>
 
                                     </div>
 
-                                    <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                                        {activity.description}
-                                    </p>
+                                    {/* ACTIVITY INFORMATION */}
 
-                                    {/* METADATA */}
+                                    <div className="min-w-0 flex-1">
 
-                                    <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                                        <div className="flex flex-wrap items-center gap-2">
 
-                                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                            <User
-                                                size={14}
-                                                className="text-slate-400"
-                                            />
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                {formatAction(activity.action)}
+                                            </h3>
 
-                                            {activity.actorName ||
-                                                activity.actor?.username ||
-                                                "System"}
-                                        </span>
-
-                                        <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
-                                            <Clock
-                                                size={14}
-                                                className="text-slate-400"
-                                            />
-
-                                            {formatDate(activity.createdAt)}
-                                            {" · "}
-                                            {formatTime(activity.createdAt)}
-                                        </span>
-
-                                        {activity.actorRole && (
-                                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                                                {activity.actorRole}
+                                            <span
+                                                className={`
+                                                    inline-flex items-center rounded-full
+                                                    px-2.5 py-1 text-[10px]
+                                                    font-bold uppercase tracking-wide
+                                                    ring-1 ring-inset
+                                                    ${
+                                                        CATEGORY_STYLES[
+                                                            activity.category
+                                                        ] ||
+                                                        "bg-slate-100 text-slate-700 ring-slate-600/20"
+                                                    }
+                                                `}
+                                            >
+                                                {activity.category || "system"}
                                             </span>
+
+                                        </div>
+
+                                        <p className="mt-1.5 text-sm leading-6 text-slate-600">
+                                            {activity.description}
+                                        </p>
+
+                                        {/* PAYMENT DETAILS */}
+
+                                        {activity.category === "payment" && (
+                                            <PaymentDetails
+                                                activity={activity}
+                                                metadata={metadata}
+                                            />
                                         )}
+
+                                        {/* GENERAL ACTIVITY METADATA */}
+
+                                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+
+                                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+
+                                                <User
+                                                    size={14}
+                                                    className="text-slate-400"
+                                                />
+
+                                                {activity.actorName ||
+                                                    activity.actor?.username ||
+                                                    "System"}
+
+                                            </span>
+
+                                            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+
+                                                <Clock
+                                                    size={14}
+                                                    className="text-slate-400"
+                                                />
+
+                                                {formatDate(activity.createdAt)}
+                                                {" · "}
+                                                {formatTime(activity.createdAt)}
+
+                                            </span>
+
+                                            {activity.actorRole && (
+                                                <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                                    {activity.actorRole}
+                                                </span>
+                                            )}
+
+                                        </div>
 
                                     </div>
 
                                 </div>
-
-                            </div>
-
-                        ))}
+                            );
+                        })}
 
                     </div>
                 )}
 
-                {/* ==================================
-                    PAGINATION
-                ================================== */}
+                {/* PAGINATION */}
 
                 {!loading && !error && pagination.total > 0 && (
                     <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 
                         <p className="text-xs text-slate-500">
+
                             Showing{" "}
+
                             <span className="font-bold text-slate-800">
                                 {(page - 1) * pagination.limit + 1}
                             </span>
+
                             {" - "}
+
                             <span className="font-bold text-slate-800">
                                 {Math.min(
                                     page * pagination.limit,
                                     pagination.total
                                 )}
                             </span>
+
                             {" of "}
+
                             <span className="font-bold text-slate-800">
                                 {pagination.total}
                             </span>
+
                             {" activities"}
+
                         </p>
 
                         <div className="flex items-center gap-2">
