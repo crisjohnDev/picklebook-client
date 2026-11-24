@@ -22,7 +22,8 @@ import {
     Trophy,
     PanelLeftClose,
     PanelLeftOpen,
-    ShieldCheck
+    ShieldCheck,
+    Activity
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -75,6 +76,12 @@ const navigation = [
         icon: ChartNoAxesCombined
     },
     {
+        name: "Activity Logs",
+        path: "/admin/activity-logs",
+        icon: Activity,
+        adminOnly: true
+    },
+    {
         name: "Settings",
         path: "/admin/settings",
         icon: Settings
@@ -86,8 +93,11 @@ const navigation = [
 // ==========================================
 
 export default function AdminLayout() {
+
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const { user, logout } = useAuth();
@@ -108,7 +118,9 @@ export default function AdminLayout() {
 
     const confirmLogout = () => {
         logout();
+
         setShowLogoutConfirm(false);
+
         navigate("/login");
     };
 
@@ -125,6 +137,7 @@ export default function AdminLayout() {
     // ======================================
 
     const visibleNavigation = navigation.filter((item) => {
+
         if (item.adminOnly && user?.role !== "admin") {
             return false;
         }
@@ -178,9 +191,7 @@ export default function AdminLayout() {
                 `}
             >
 
-                {/* ==================================
-                    LOGO SECTION
-                ================================== */}
+                {/* LOGO SECTION */}
 
                 <div
                     className={`
@@ -212,7 +223,7 @@ export default function AdminLayout() {
                         )}
                     </div>
 
-                    {/* Mobile Close */}
+                    {/* MOBILE CLOSE */}
 
                     {!sidebarCollapsed && (
                         <button
@@ -247,6 +258,7 @@ export default function AdminLayout() {
                     <nav className="space-y-1.5">
 
                         {visibleNavigation.map((item) => {
+
                             const Icon = item.icon;
 
                             return (
@@ -254,7 +266,11 @@ export default function AdminLayout() {
                                     key={item.path}
                                     to={item.path}
                                     onClick={closeSidebar}
-                                    title={sidebarCollapsed ? item.name : ""}
+                                    title={
+                                        sidebarCollapsed
+                                            ? item.name
+                                            : ""
+                                    }
                                     className={({ isActive }) => `
                                         group relative flex items-center
                                         rounded-xl py-3
@@ -312,7 +328,7 @@ export default function AdminLayout() {
                                                 />
                                             )}
 
-                                            {/* Active Indicator */}
+                                            {/* ACTIVE INDICATOR */}
 
                                             {sidebarCollapsed && isActive && (
                                                 <span className="absolute -right-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-l-full bg-emerald-400" />
@@ -342,7 +358,11 @@ export default function AdminLayout() {
                                     : "gap-3 p-3"
                             }
                         `}
-                        title={sidebarCollapsed ? user?.fullName : ""}
+                        title={
+                            sidebarCollapsed
+                                ? user?.fullName
+                                : ""
+                        }
                     >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
                             <CircleUserRound size={22} />
@@ -361,12 +381,16 @@ export default function AdminLayout() {
                         )}
                     </div>
 
-                    {/* Logout Button */}
+                    {/* LOGOUT BUTTON */}
 
                     <button
                         type="button"
                         onClick={handleLogout}
-                        title={sidebarCollapsed ? "Logout" : ""}
+                        title={
+                            sidebarCollapsed
+                                ? "Logout"
+                                : ""
+                        }
                         className={`
                             flex w-full items-center rounded-xl
                             py-3 text-sm font-medium
@@ -410,7 +434,7 @@ export default function AdminLayout() {
 
                     <div className="flex min-w-0 items-center gap-3">
 
-                        {/* Mobile Menu */}
+                        {/* MOBILE MENU */}
 
                         <button
                             type="button"
@@ -421,7 +445,7 @@ export default function AdminLayout() {
                             <Menu size={22} />
                         </button>
 
-                        {/* Desktop Collapse Button */}
+                        {/* DESKTOP COLLAPSE BUTTON */}
 
                         <button
                             type="button"
@@ -507,13 +531,13 @@ export default function AdminLayout() {
                         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
                     >
 
-                        {/* Icon */}
+                        {/* ICON */}
 
                         <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500">
                             <LogOut size={27} />
                         </div>
 
-                        {/* Title */}
+                        {/* TITLE */}
 
                         <h2
                             id="logout-modal-title"
@@ -528,7 +552,7 @@ export default function AdminLayout() {
                             administration panel.
                         </p>
 
-                        {/* Actions */}
+                        {/* ACTIONS */}
 
                         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 

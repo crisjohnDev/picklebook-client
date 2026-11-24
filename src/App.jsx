@@ -26,6 +26,7 @@ import Payments from "./pages/admin/Payments";
 import Reports from "./pages/admin/Reports";
 import Settings from "./pages/admin/Settings";
 import UserManagement from "./pages/admin/UserManagement";
+import ActivityLogs from "./pages/admin/ActivityLogs";
 
 // Staff Pages
 import StaffDashboard from "./pages/staff/Dashboard";
@@ -44,9 +45,9 @@ import StaffLayout from "./layouts/StaffLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 // ==========================================
-// REDIRECT AUTHENTICATED USERS TO THEIR
-// RESPECTIVE DASHBOARDS
+// REDIRECT AUTHENTICATED USERS TO DASHBOARDS
 // ==========================================
+
 function getDashboardPath(role) {
     switch (role) {
         case "admin":
@@ -65,9 +66,8 @@ function getDashboardPath(role) {
 
 // ==========================================
 // GUEST ROUTE
-// Prevent authenticated users from accessing
-// login and register pages.
 // ==========================================
+
 function GuestRoute({ children }) {
     const { user, loading } = useAuth();
 
@@ -96,15 +96,14 @@ function GuestRoute({ children }) {
 // ==========================================
 // APPLICATION ROUTES
 // ==========================================
+
 function AppRoutes() {
     const { user } = useAuth();
 
     return (
         <Routes>
 
-            {/* =================================
-                PUBLIC AUTHENTICATION ROUTES
-            ================================= */}
+            {/* PUBLIC AUTHENTICATION ROUTES */}
 
             <Route
                 path="/login"
@@ -124,10 +123,7 @@ function AppRoutes() {
                 }
             />
 
-
-            {/* =================================
-                CUSTOMER ROUTES
-            ================================= */}
+            {/* CUSTOMER ROUTES */}
 
             <Route
                 element={
@@ -140,11 +136,7 @@ function AppRoutes() {
                 />
             </Route>
 
-
-            {/* =================================
-                ADMIN ROUTES
-                Admin has a separate layout.
-            ================================= */}
+            {/* ADMIN ROUTES */}
 
             <Route
                 element={
@@ -213,14 +205,16 @@ function AppRoutes() {
                         element={<UserManagement />}
                     />
 
+                    {/* ACTIVITY LOGS */}
+                    <Route
+                        path="activity-logs"
+                        element={<ActivityLogs />}
+                    />
+
                 </Route>
             </Route>
 
-
-            {/* =================================
-                STAFF ROUTES
-                Staff has a separate layout.
-            ================================= */}
+            {/* STAFF ROUTES */}
 
             <Route
                 element={
@@ -239,40 +233,55 @@ function AppRoutes() {
                         }
                     />
 
-                      <Route
-                          path="dashboard"
-                          element={<StaffDashboard />}
-                      />
+                    <Route
+                        path="dashboard"
+                        element={<StaffDashboard />}
+                    />
 
-                      <Route
-                          path="walk-in-booking"
-                          element={<WalkInBooking />}
-                      />
-                      <Route
-                          path="scheduling"
-                          element={<StaffScheduling />}
-                      />
-                      <Route
-                          path="reservations"
-                          element={<StaffReservations />}
-                      />
-                      <Route path="customers" element={<StaffCustomers />} />
-                      <Route path="payments" element={<StaffPayments />} />
-                      <Route path="my-account" element={<StaffMyAccount />} />
+                    <Route
+                        path="walk-in-booking"
+                        element={<WalkInBooking />}
+                    />
+
+                    <Route
+                        path="scheduling"
+                        element={<StaffScheduling />}
+                    />
+
+                    <Route
+                        path="reservations"
+                        element={<StaffReservations />}
+                    />
+
+                    <Route
+                        path="customers"
+                        element={<StaffCustomers />}
+                    />
+
+                    <Route
+                        path="payments"
+                        element={<StaffPayments />}
+                    />
+
+                    <Route
+                        path="my-account"
+                        element={<StaffMyAccount />}
+                    />
 
                 </Route>
             </Route>
 
-
-            {/* =================================
-                UNKNOWN ROUTES
-            ================================= */}
+            {/* UNKNOWN ROUTES */}
 
             <Route
                 path="*"
                 element={
                     <Navigate
-                        to={user ? getDashboardPath(user.role) : "/login"}
+                        to={
+                            user
+                                ? getDashboardPath(user.role)
+                                : "/login"
+                        }
                         replace
                     />
                 }
@@ -285,6 +294,7 @@ function AppRoutes() {
 // ==========================================
 // MAIN APPLICATION
 // ==========================================
+
 export default function App() {
     return (
         <BrowserRouter>
